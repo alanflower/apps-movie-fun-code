@@ -1,7 +1,9 @@
 package org.superbiz.moviefun;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import org.superbiz.moviefun.MoviesBean;
@@ -14,9 +16,16 @@ public class HomeController {
 
     private final MoviesBean moviesBean;
 
-    HomeController (MoviesBean moviesBean) {
-        this.moviesBean = moviesBean;
+    private final PlatformTransactionManager moviesTransactionManager;
+    private final PlatformTransactionManager albumsTransactionManager;
 
+    public HomeController(MoviesBean moviesBean, AlbumsBean albumsBean, MovieFixtures movieFixtures, AlbumFixtures albumFixtures, @Qualifier("movies") PlatformTransactionManager moviesTransactionManager, @Qualifier("albums") PlatformTransactionManager albumsTransactionManager) {
+        this.moviesBean = moviesBean;
+        this.albumsBean = albumsBean;
+        this.movieFixtures = movieFixtures;
+        this.albumFixtures = albumFixtures;
+        this.moviesTransactionManager = moviesTransactionManager;
+        this.albumsTransactionManager =albumsTransactionManager;
     }
 
     @GetMapping("/")
@@ -27,16 +36,32 @@ public class HomeController {
     //@Transactional
     @GetMapping("/setup")
     public String setup(Map<String, Object> model) {
+        createMovies();
+        createAlbums();
 
-        moviesBean.addMovie(new Movie("Wedding Crashers", "David Dobkin", "Comedy", 7, 2005));
-        moviesBean.addMovie(new Movie("Starsky & Hutch", "Todd Phillips", "Action", 6, 2004));
-        moviesBean.addMovie(new Movie("Shanghai Knights", "David Dobkin", "Action", 6, 2003));
-        moviesBean.addMovie(new Movie("I-Spy", "Betty Thomas", "Adventure", 5, 2002));
-        moviesBean.addMovie(new Movie("The Royal Tenenbaums", "Wes Anderson", "Comedy", 8, 2001));
-        moviesBean.addMovie(new Movie("Zoolander", "Ben Stiller", "Comedy", 6, 2001));
-        moviesBean.addMovie(new Movie("Shanghai Noon", "Tom Dey", "Comedy", 7, 2000));
         model.put("movies", moviesBean.getMovies());
+        model.put("albums", albumsBean.getAlbums());
 
         return "setup";
+    }
+
+    private void createAlbums() {
+        TransactionStatus transaction = albumsTransactionManager.getTransaction(null);
+
+        for (Album album : albumFixtures.load()) {
+            albumsBean.addAlbum(album);
+        }
+
+        albumsTransactionManager.commit(transaction);
+    }
+
+    private void createMovies() {
+        TransactionStatus transaction = moviesTransactionManager.getTransaction(null);
+
+        for (Movie movie : movieFixtures.load()) {
+            moviesBean.addMovie(movie);
+        }
+
+        moviesTransactionManager.commit(transaction);
     }
 }
