@@ -132,6 +132,7 @@
             <groupId>org.springframework.integration</groupId>
             <artifactId>spring-integration-java-dsl</artifactId>
         </dependency>
+
     </dependencies>
 
 
